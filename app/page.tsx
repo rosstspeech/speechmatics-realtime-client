@@ -24,7 +24,7 @@ export default async function Page() {
 
   return (
     <AudioProvider>
-      <RealtimeTranscriptionProvider appId="nextjs-rt-example">
+      <RealtimeTranscriptionProvider url='wss://preview.rt.speechmatics.com/v2' appId="nextjs-rt-example">
         <section>
           <h3>Real-time Example</h3>
           <section className="grid">

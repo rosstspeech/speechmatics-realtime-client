@@ -1,5 +1,5 @@
 'use client';
-import { useReducer } from 'react';
+import { useReducer, useRef } from 'react';
 import {
   type RealtimeServerMessage,
   useRealtimeEventListener,
@@ -7,6 +7,8 @@ import {
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from './ErrorFallback';
 import { exportToWord } from '@/utils/exportToWord';
+
+let lastSpeaker: string = "";
 
 export function Output() {
   return (
@@ -33,8 +35,21 @@ function groupBySpeaker(words: readonly Word[]) {
 
 export function Component() {
   const [transcription, dispatch] = useReducer(transcriptReducer, []);
+  const lastSpeakerRef = useRef<string>('');
 
-  useRealtimeEventListener('receiveMessage', (e) => dispatch(e.data));
+  useRealtimeEventListener('receiveMessage', (e) => {
+    if(e.data.message === 'AddPartialTranscript' || e.data.message === 'AddTranscript') {
+      const results = e.data.results;
+      if (results.length) {
+        lastSpeakerRef.current = results[results.length - 1].alternatives?.[0].speaker ?? '';
+      }
+    }
+    if(e.data.message === 'EndOfUtterance') {
+      // @ts-ignore: augmenting metadata for speaker tracking
+      e.data.metadata.speaker = lastSpeakerRef.current;
+    }
+    dispatch(e.data)
+  });
   
   return (
     <article>
@@ -81,7 +96,10 @@ function transcriptReducer(
   words: readonly Word[],
   event: RealtimeServerMessage,
 ): readonly Word[] {
-  if (event.message === 'AddTranscript') {
+
+  if(event.message === 'AddPartialTranscript' || event.message === 'AddTranscript') 
+
+  if (event.message === 'AddTranscript' || event.message === 'AddPartialTranscript') {
     return [
       ...words.filter((w) => !w.partial),
       ...event.results.map((result) => ({
@@ -90,22 +108,23 @@ function transcriptReducer(
         startTime: result.start_time ?? 0,
         endTime: result.end_time ?? 0,
         punctuation: result.type === 'punctuation',
+        partial: event.message === 'AddPartialTranscript',
       })),
     ];
   }
 
-  if (event.message === 'AddPartialTranscript') {
+  if (event.message === 'EndOfUtterance') {
     return [
       ...words.filter((w) => !w.partial),
-      ...event.results.map((result) => ({
-        text: result.alternatives?.[0].content ?? '',
-        speaker: result.alternatives?.[0].speaker ?? '',
-        startTime: result.start_time ?? 0,
-        endTime: result.end_time ?? 0,
-        punctuation: result.type === 'punctuation',
-        partial: true,
-      })),
-    ];
+      {
+        text: "[EOU]",
+        // @ts-ignore: augmenting metadata for speaker tracking
+        speaker: event.metadata.speaker ?? '',
+        startTime: event.metadata.start_time ?? 0,
+        endTime: event.metadata.end_time ?? 0,
+        punctuation: false,
+      },
+    ]
   }
 
   return words;

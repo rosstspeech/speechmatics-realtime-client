@@ -10,13 +10,23 @@ export function configFromFormData(
     throw new Error('Language is required');
   }
 
+  const maxDelayValue = parseFloat(
+    formData.get('maxDelayValue')?.toString() ?? '1.5'
+  );
+  const endOfUtteranceValue = parseFloat(
+    formData.get('endOfUtteranceValue')?.toString() ?? '0.5'
+  );
+
   return {
     transcription_config: {
       language,
-      max_delay: 1,
+      max_delay: maxDelayValue,
       operating_point: 'enhanced',
       enable_partials: true,
-      diarization: 'speaker'
+      diarization: 'speaker',
+      conversation_config: {
+        end_of_utterance_silence_trigger: endOfUtteranceValue
+      }
     },
   };
 }

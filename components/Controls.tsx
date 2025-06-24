@@ -1,5 +1,5 @@
 'use client';
-import { type FormEvent, useCallback, useEffect } from 'react';
+import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import {
   usePCMAudioListener,
   usePCMAudioRecorderContext,
@@ -13,6 +13,7 @@ import { configFromFormData } from '@/lib/config-from-form-data';
 import { RECORDING_SAMPLE_RATE } from '@/lib/constants';
 import { MicrophoneSelect } from './MicrophoneSelect';
 import { LanguageSelect } from './LanguageSelect';
+import { Slider } from './Slider';
 
 export function Controls({
   languages,
@@ -22,6 +23,9 @@ export function Controls({
 
   const { isRecording, startRecording, stopRecording } =
     usePCMAudioRecorderContext();
+
+     const [maxDelayValue, setMaxDelayValue] = useState(1.5);
+     const [endOfUtteranceValue, setEndOfUtteranceValue] = useState(0.5);
 
     usePCMAudioListener((data) => {
       // Check if the incoming data is a Float32Array and convert it to an ArrayBuffer
@@ -74,7 +78,31 @@ export function Controls({
       <form onSubmit={handleSubmit}>
         <div className="grid">
           <MicrophoneSelect disabled={isRecording} />
-          <LanguageSelect languages={languages} disabled={isRecording} />
+          <LanguageSelect languages={languages} disabled={isRecording} />          
+        </div>
+        <div className='grid'>
+          <Slider
+            id='maxDelay'
+            name='maxDelayValue'
+            label='Max Delay'
+            min={0}
+            max={4}
+            step={0.1}
+            value={maxDelayValue}
+            onChange={setMaxDelayValue}
+            disabled={isRecording}
+          />
+          <Slider
+            id='endOfUtterance'
+            name='endOfUtteranceValue'
+            label='Silence Threshold'
+            min={0}
+            max={2}
+            step={0.01}
+            value={endOfUtteranceValue}
+            onChange={setEndOfUtteranceValue}
+            disabled={isRecording}
+          />
         </div>
         <div className="grid">
           <StartStopButton />
